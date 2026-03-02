@@ -1,0 +1,66 @@
+name: Build and Deploy CS2 Server
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the workflow from the Actions tab
+
+env:
+  IMAGE_NAME: cs2-local-build
+  CONTAINER_NAME: cs2-server
+
+jobs:
+  deploy-to-self-hosted:
+    # This tells GitHub to run this job on your personal server
+    runs-on: self-hosted 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Load Deployment Settings
+        run: |
+          # Read settings from deployment_settings.json or use defaults
+          CONTAINER_NAME=$(jq -r '.CONTAINER_NAME // "cs2-server"' deployment_settings.json)
+          DOCKER_VOLUME_NAME=$(jq -r '.DOCKER_VOLUME_NAME // "cs2-data"' deployment_settings.json)
+          GAME_PORT=$(jq -r '.GAME_PORT // 27015' deployment_settings.json)
+          GOTV_PORT=$(jq -r '.GOTV_PORT // 27020' deployment_settings.json)
+          
+          echo "CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
+          echo "DOCKER_VOLUME_NAME=$DOCKER_VOLUME_NAME" >> $GITHUB_ENV
+          echo "GAME_PORT=$GAME_PORT" >> $GITHUB_ENV
+          echo "GOTV_PORT=$GOTV_PORT" >> $GITHUB_ENV
+
+      - name: Build Docker image locally
+        run: |
+          docker build \
+            --build-arg GAME_PORT="${{ env.GAME_PORT }}" \
+            --build-arg GOTV_PORT="${{ env.GOTV_PORT }}" \
+            -t ${{ env.IMAGE_NAME }}:latest .
+
+      - name: Stop and remove existing container
+        run: |
+          # The "|| true" prevents the workflow from failing if the container doesn't exist yet
+          docker stop ${{ env.CONTAINER_NAME }} || true
+          docker rm ${{ env.CONTAINER_NAME }} || true
+
+      - name: Prepare environment variables
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          echo "$SECRETS_JSON" | jq -r 'to_entries | map("\(.key)=\(.value|tostring)") | .[]' > .env
+
+      - name: Start new CS2 container
+        run: |
+          docker run -d \
+            --name ${{ env.CONTAINER_NAME }} \
+            --restart unless-stopped \
+            --security-opt seccomp=unconfined \
+            --security-opt apparmor=unconfined \
+            -v ${{ env.DOCKER_VOLUME_NAME }}:/CS2 \
+            -p ${{ env.GAME_PORT }}:${{ env.GAME_PORT }}/tcp \
+            -p ${{ env.GAME_PORT }}:${{ env.GAME_PORT }}/udp \
+            -p ${{ env.GOTV_PORT }}:${{ env.GOTV_PORT }}/udp \
+            -p 3306:3306/tcp \
+            --env-file .env \
+            -e LD_LIBRARY_PATH="/CS2/game/bin/linuxsteamrt64" \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            ${{ env.IMAGE_NAME }}:latest

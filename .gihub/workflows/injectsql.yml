@@ -1,0 +1,38 @@
+name: Inject SQL Backup to Volume
+on:
+  workflow_dispatch:
+
+jobs:
+  inject_backup:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Load Deployment Settings
+        run: |
+          # Read settings from deployment_settings.json or use defaults
+          DOCKER_VOLUME_NAME=$(jq -r '.DOCKER_VOLUME_NAME // "cs2-data"' deployment_settings.json)
+          echo "DOCKER_VOLUME_NAME=$DOCKER_VOLUME_NAME" >> $GITHUB_ENV
+
+      - name: Inject SQL file into cs2-data volume
+        run: |
+          echo "Copying cs2_admin_backup.sql into cs2-data volume..."
+          
+          # We use a temporary alpine container to write to the volume.
+          # This completely bypasses the running cs2-server container.
+          docker run --rm \
+            -v ${{ env.DOCKER_VOLUME_NAME }}:/target_volume \
+            -v ${{ github.workspace }}:/workspace \
+            alpine \
+            cp /workspace/databases/cs2_admin_backup.sql /target_volume/cs2_admin_backup.sql
+            
+          echo "File successfully injected."
+
+      - name: Verify file in volume
+        run: |
+          echo "Verifying file placement and permissions..."
+          
+          # Use another temporary container just to run 'ls' on the volume
+          docker run --rm \
+            -v ${{ env.DOCKER_VOLUME_NAME }}:/target_volume \
