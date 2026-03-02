@@ -11,7 +11,8 @@
     <arg value="+game_type 0" />
     <arg value="+game_mode 0" />
     <arg value="-ip 0.0.0.0" />
-    <arg value="-port 27015" />
+    <arg value="{{GAME_PORT_ARG}}" />
+    <arg value="{{GOTV_PORT_ARG}}" />
     <!-- <arg value="-maxplayers 64" /> -->
     <!-- <arg value="-maxplayers_override 64" /> -->
     <arg value="-tickrate 128" />
