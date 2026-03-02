@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  Add the GitHub latest release URLs for ANY custom files you want to install.
+  This includes plugins, custom maps, configs, or other server assets.
+  
+  - url: The base URL to the latest release (e.g., https://github.com/user/repo/releases/latest).
+  - asset_indexes: Comma-separated list of asset indexes to download (starting at 1, based on their order on the release page).
+  - types: Comma-separated list of types corresponding to each index ('zip' or 'file').
+  - dests: Comma-separated list of absolute paths inside the container corresponding to each index.
+  - excludes: Space-separated list of paths inside the zip files to omit the extraction of.
+-->
+<assets>
+    <!-- Plugin Example: Extracts the 1st asset to the root game folder
+    <asset 
+        url="https://github.com/author/SamplePlugin/releases/latest" 
+        asset_indexes="1,2,4"
+        types="file, zip, zip" 
+        dests="/file/one/goes/here/", "/zip/two/extracts/here/", "/zip/three/extracts/here/" />
+        excludes="counterstrikesharp/plugins/CS2-SimpleAdmin_FunCommands/* counterstrikesharp/plugins/CS2-SimpleAdmin_StealthModule/*" 
+        -->
+    <!-- SimpleAdmin CSS plugin -->
+    <asset 
+        url="https://github.com/NickFox007/AnyBaseLibCS2/releases/latest" 
+        asset_indexes="1"
+        types="zip" 
+        dests="/CS2/game/csgo/" />
+    <asset 
+        url="https://github.com/NickFox007/PlayerSettingsCS2/releases/latest" 
+        asset_indexes="1"
+        types="zip" 
+        dests="/CS2/game/csgo/" />
+    <asset 
+        url="https://github.com/NickFox007/MenuManagerCS2/releases/latest" 
+        asset_indexes="1"
+        types="zip" 
+        dests="/CS2/game/csgo/" />
+    <asset 
+        url="https://github.com/daffyyyy/CS2-SimpleAdmin/releases/latest" 
+        asset_indexes="1"
+        types="zip" 
+        dests="/CS2/game/csgo/addons/" 
+        excludes="counterstrikesharp/plugins/CS2-SimpleAdmin_FunCommands/* counterstrikesharp/plugins/CS2-SimpleAdmin_StealthModule/*" />
+</assets>

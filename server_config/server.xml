@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  Define the standard server.cfg settings here. 
+  The RCON password is automatically injected by the deployment script securely.
+-->
+<server>
+    <arg value="log on" />
+    <arg value='hostname "My CS2ServerCommander Server"' />
+    <!-- <arg value="mp_match_end_restart 0" /> -->
+    <!-- <arg value="mp_match_end_changelevel 1" /> -->
+    <!-- <arg value="mp_drop_knife_enable true" /> -->
+    <!-- <arg value="mp_spectators_max 10" /> -->
+    <!-- <arg value="mp_solid_teammates 2" /> -->
+    <!-- <arg value="sv_hibernate_when_empty false" /> -->
+    <!-- <arg value="mp_autokick 0" /> -->
+    <!-- <arg value="bot_all_weapons 1" /> -->
+</server>

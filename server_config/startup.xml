@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+  Define the startup arguments for the CS2 dedicated server here.
+  These will be parsed and passed to the executable on boot.
+  Note: +sv_setsteamaccount is injected securely via environment variables at runtime.
+-->
+<startup>
+    <arg value="-dedicated" />
+    <arg value="-console" />
+    <arg value="-usercon" />
+    <arg value="+game_type 0" />
+    <arg value="+game_mode 0" />
+    <arg value="-ip 0.0.0.0" />
+    <arg value="-port 27015" />
+    <!-- <arg value="-maxplayers 64" /> -->
+    <!-- <arg value="-maxplayers_override 64" /> -->
+    <arg value="-tickrate 128" />
+    <arg value="-threads 16" />
+    <arg value="+map cs_italy" />
+    <arg value="-net_port_try 1" />
+    <arg value="+sv_lan 0" />
+    <!-- <arg value="+host_workshop_collection 1234567890" /> -->
+</startup>
