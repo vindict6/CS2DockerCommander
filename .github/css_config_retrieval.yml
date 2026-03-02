@@ -1,0 +1,32 @@
+name: Retrieve Live CSS Configs
+
+on:
+  workflow_dispatch: # Allows admins to trigger this manually from the GitHub UI
+
+env:
+  CONTAINER_NAME: cs2-server
+
+jobs:
+  retrieve-configs:
+    runs-on: self-hosted
+
+    steps:
+      - name: Extract configs from Docker Container
+        run: |
+          # Create a temporary directory for the configs
+          mkdir -p ./live_configs
+          
+          # Copy the entire configs folder from the running container to the runner
+          # We use "|| true" to prevent failure if the folder doesn't exist yet
+          docker cp ${{ env.CONTAINER_NAME }}:/CS2/game/csgo/addons/counterstrikesharp/configs ./live_configs/ || true
+
+      - name: Upload Configs as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: css-live-configs
+          path: ./live_configs/configs/
+          retention-days: 5 # Keeps the zip available for 5 days
+          
+      - name: Cleanup temporary files
+        run: |
+          rm -rf ./live_configs

@@ -1,0 +1,50 @@
+name: Build and Deploy CS2 Server
+
+on:
+  workflow_dispatch: # Allows you to manually trigger the workflow from the Actions tab
+
+env:
+  IMAGE_NAME: cs2-local-build
+  CONTAINER_NAME: cs2-server
+
+jobs:
+  deploy-to-self-hosted:
+    # This tells GitHub to run this job on your personal server
+    runs-on: self-hosted 
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image locally
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }}:latest .
+
+      - name: Stop and remove existing container
+        run: |
+          # The "|| true" prevents the workflow from failing if the container doesn't exist yet
+          docker stop ${{ env.CONTAINER_NAME }} || true
+          docker rm ${{ env.CONTAINER_NAME }} || true
+
+      - name: Prepare environment variables
+        env:
+          SECRETS_JSON: ${{ toJSON(secrets) }}
+        run: |
+          echo "$SECRETS_JSON" | jq -r 'to_entries | map("\(.key)=\(.value|tostring)") | .[]' > .env
+
+      - name: Start new CS2 container
+        run: |
+          docker run -d \
+            --name ${{ env.CONTAINER_NAME }} \
+            --restart unless-stopped \
+            --security-opt seccomp=unconfined \
+            --security-opt apparmor=unconfined \
+            -v cs2-data:/CS2 \
+            -p 27015:27015/tcp \
+            -p 27015:27015/udp \
+            -p 27020:27020/udp \
+            -p 3306:3306/tcp \
+            --env-file .env \
+            -e LD_LIBRARY_PATH="/CS2/game/bin/linuxsteamrt64" \
+            -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
+            ${{ env.IMAGE_NAME }}:latest
