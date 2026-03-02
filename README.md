@@ -20,7 +20,7 @@
 > *This container is fully pre-configured out-of-the-box to download, mount, and manage CounterStrikeSharp and its necessary ecosystem dependencies upon boot.*
 
 This repository is a fully automated infrastructure-as-code solution for deploying a **Counter-Strike 2 Dedicated Server**. 
-Built on Docker and powered by GitHub Actions, it completely handles the heavy lifting: SteamCMD updates, MetaMod & CounterStrikeSharp installations, dynamic plugin downloads, database migrations, and live config updates—all without you ever needing to blindly FTP into a server.
+Built on Docker and powered by GitHub Actions, it completely handles the heavy lifting: SteamCMD updates, MetaMod & CounterStrikeSharp installations, dynamic plugin downloads, database migrations, and live config updates—all without you ever needing to FTP into a server.
 
 It natively manages the game environment configuration while utilizing persistent Docker Volumes to ensure your maps, databases, and custom plugins are perfectly preserved across every update footprint.
 
