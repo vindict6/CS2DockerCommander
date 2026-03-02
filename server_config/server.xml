@@ -5,7 +5,7 @@
 -->
 <server>
     <arg value="log on" />
-    <arg value='hostname "My CS2ServerCommander Server"' />
+    <arg value='hostname "My CS2DockerCommander Server"' />
     <!-- <arg value="mp_match_end_restart 0" /> -->
     <!-- <arg value="mp_match_end_changelevel 1" /> -->
     <!-- <arg value="mp_drop_knife_enable true" /> -->
