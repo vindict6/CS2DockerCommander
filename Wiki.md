@@ -8,6 +8,37 @@ Welcome to the CS2 Docker Commander Wiki! This wiki is designed to guide both la
 
 ---
 
+## ⚙️ Deployment Configuration
+
+The server is now highly configurable via the `deployment_settings.json` file in the root of the repository. You can change these settings to customize how your server is deployed without modifying the workflow files.
+
+### Available Settings
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `SIMPLEADMIN_LOCALHOST_DB` | `true` | Enables the built-in MariaDB server for CS2-SimpleAdmin. |
+| `GAME_PORT` | `27015` | The UDP/TCP port for game traffic. |
+| `GOTV_PORT` | `27020` | The UDP port for GOTV (SourceTV) relay. |
+| `GOTV_ENABLED` | `false` | Enables or disables GOTV. If enabled, it uses the port defined in `GOTV_PORT`. |
+| `CONTAINER_NAME` | `cs2-server` | The name of the Docker container. Useful if running multiple servers on one host. |
+| `DOCKER_VOLUME_NAME` | `cs2-data` | The name of the Docker volume for persistent data. Change this to run multiple distinct server instances. |
+
+**Example `deployment_settings.json`:**
+```json
+{
+  "SIMPLEADMIN_LOCALHOST_DB": true,
+  "GAME_PORT": 27015,
+  "GOTV_PORT": 27020,
+  "CONTAINER_NAME": "cs2-server",
+  "DOCKER_VOLUME_NAME": "cs2-data",
+  "GOTV_ENABLED": false
+}
+```
+
+> **Note:** The `GAME_PORT` and `GOTV_PORT` you specify here are automatically exposed in the Docker container during the build process.
+
+---
+
 ## 📄 Understanding Your Server Layout (For Laymen)
 
 Before we start running commands and clicking buttons, it's important to understand how the server actually works. Don't worry, this sounds complex but we've broken it down to be very simple!

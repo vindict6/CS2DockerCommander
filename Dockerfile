@@ -34,8 +34,10 @@ COPY --chown=steam:steam entrypoint.sh /app/entrypoint.sh
 
 RUN chmod +x /app/entrypoint.sh
 
-# Open necessary ports (Game ports and Database)
-EXPOSE 27015/tcp 27015/udp 27020/udp
+# Open necessary ports (Game ports)
+ARG GAME_PORT=27015
+ARG GOTV_PORT=27020
+EXPOSE ${GAME_PORT}/tcp ${GAME_PORT}/udp ${GOTV_PORT}/udp
 
 # Start the initialization script
 ENTRYPOINT ["/app/entrypoint.sh"]

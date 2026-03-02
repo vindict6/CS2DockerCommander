@@ -1,3 +1,8 @@
 {
-  "SIMPLEADMIN_LOCALHOST_DB": true
+  "SIMPLEADMIN_LOCALHOST_DB": true,
+  "GAME_PORT": 27015,
+  "GOTV_PORT": 27020,
+  "CONTAINER_NAME": "cs2-server",
+  "DOCKER_VOLUME_NAME": "cs2-data",
+  "GOTV_ENABLED": false
 }

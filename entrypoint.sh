@@ -8,6 +8,27 @@ else
     ~/steamcmd/steamcmd.sh +force_install_dir ${CS2_DIR} +login anonymous +app_update 730 validate +quit
 fi
 
+# Configure Ports and Startup arguments based on deployment_settings.json
+GAME_PORT=$(jq -r '.GAME_PORT // 27015' /app/deployment_settings.json)
+GOTV_PORT=$(jq -r '.GOTV_PORT // 27020' /app/deployment_settings.json)
+GOTV_ENABLED=$(jq -r '.GOTV_ENABLED // false' /app/deployment_settings.json)
+
+GAME_PORT_ARG="-port ${GAME_PORT}"
+if [ "$GOTV_ENABLED" = "true" ]; then
+    GOTV_PORT_ARG="+tv_port ${GOTV_PORT} +tv_enable 1"
+else
+    # Explicitly disable GOTV if not enabled to avoid default port conflict or unwanted behavior
+    GOTV_PORT_ARG="+tv_enable 0"
+fi
+
+echo "Configuring Server Ports: Game=${GAME_PORT}, GOTV=${GOTV_PORT} (Enabled: ${GOTV_ENABLED})"
+
+# Replace placeholders in startup.xml
+if [ -f "/app/server_config/startup.xml" ]; then
+    sed -i "s|{{GAME_PORT_ARG}}|${GAME_PORT_ARG}|g" /app/server_config/startup.xml
+    sed -i "s|{{GOTV_PORT_ARG}}|${GOTV_PORT_ARG}|g" /app/server_config/startup.xml
+fi
+
 # Check deployment settings for MariaDB
 ENABLE_LOCALHOST_DB="true" # Default to true if not specified
 if [ -f "/app/deployment_settings.json" ]; then

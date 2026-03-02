@@ -24,6 +24,9 @@ Built on Docker and powered by GitHub Actions, it completely handles the heavy l
 
 It natively manages the game environment configuration while utilizing persistent Docker Volumes to ensure your maps, databases, and custom plugins are perfectly preserved across every update footprint.
 
+> **NEW: Easy Deployment Configuration!**  
+> You can now easily configure your ports, container name, and GOTV settings in `deployment_settings.json` without touching any code.
+
 <br>
 
 <a href="./Wiki.md">
