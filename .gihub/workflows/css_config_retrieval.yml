@@ -3,9 +3,6 @@ name: Retrieve Live CSS Configs
 on:
   workflow_dispatch: # Allows admins to trigger this manually from the GitHub UI
 
-env:
-  CONTAINER_NAME: cs2-server
-
 jobs:
   retrieve-configs:
     runs-on: self-hosted
@@ -14,13 +11,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Load Container Name
+      - name: Load Deployment Settings
+        id: load_settings
         run: |
-          CONTAINER_NAME=$(jq -r '.CONTAINER_NAME // "cs2-server"' deployment_settings.json)
-          echo "CONTAINER_NAME=$CONTAINER_NAME" >> $GITHUB_ENV
+          SETTINGS_FILE="${{ github.workspace }}/deployment_settings.json"
+          
+          if [ -f "$SETTINGS_FILE" ]; then
+            # Extract the container name using jq
+            CONTAINER=$(jq -r '.CONTAINER_NAME' "$SETTINGS_FILE")
+            echo "CONTAINER_NAME=$CONTAINER" >> $GITHUB_ENV
+            echo "Successfully loaded Container Name: $CONTAINER"
+          else
+            echo "::error::deployment_settings.json not found in root!"
+            exit 1
+          fi
 
       - name: Extract configs from Docker Container
         run: |
+          echo "Extracting configs from container: ${{ env.CONTAINER_NAME }}..."
+          
           # Create a temporary directory for the configs
           mkdir -p ./live_configs
           
@@ -37,4 +46,5 @@ jobs:
           
       - name: Cleanup temporary files
         run: |
+          echo "Cleaning up local workspace..."
           rm -rf ./live_configs
