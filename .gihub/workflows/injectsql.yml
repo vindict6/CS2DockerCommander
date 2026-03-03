@@ -1,4 +1,5 @@
-name: Inject SQL Backup to Volume
+name: Inject SQL Backup to Container Root
+
 on:
   workflow_dispatch:
 
@@ -10,29 +11,32 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Load Deployment Settings
+        id: load_settings
         run: |
-          # Read settings from deployment_settings.json or use defaults
-          DOCKER_VOLUME_NAME=$(jq -r '.DOCKER_VOLUME_NAME // "cs2-data"' deployment_settings.json)
-          echo "DOCKER_VOLUME_NAME=$DOCKER_VOLUME_NAME" >> $GITHUB_ENV
-
-      - name: Inject SQL file into cs2-data volume
-        run: |
-          echo "Copying cs2_admin_backup.sql into cs2-data volume..."
+          SETTINGS_FILE="${{ github.workspace }}/deployment_settings.json"
           
-          # We use a temporary alpine container to write to the volume.
-          # This completely bypasses the running cs2-server container.
-          docker run --rm \
-            -v ${{ env.DOCKER_VOLUME_NAME }}:/target_volume \
-            -v ${{ github.workspace }}:/workspace \
-            alpine \
-            cp /workspace/databases/cs2_admin_backup.sql /target_volume/cs2_admin_backup.sql
-            
+          if [ -f "$SETTINGS_FILE" ]; then
+            # Extract the CONTAINER_NAME using jq
+            CONTAINER=$(jq -r '.CONTAINER_NAME' "$SETTINGS_FILE")
+            echo "CONTAINER_NAME=$CONTAINER" >> $GITHUB_ENV
+            echo "Loaded Container: $CONTAINER"
+          else
+            echo "::error::deployment_settings.json not found in root!"
+            exit 1
+          fi
+
+      - name: Copy SQL file into Container Root
+        run: |
+          echo "Copying backup to the root (/) of running container: ${{ env.CONTAINER_NAME }}..."
+          
+          # docker cp copies the file directly into the running container's filesystem
+          docker cp ${{ github.workspace }}/databases/cs2_admin_backup.sql ${{ env.CONTAINER_NAME }}:/cs2_admin_backup.sql
+          
           echo "File successfully injected."
 
-      - name: Verify file in volume
+      - name: Verify file in container
         run: |
-          echo "Verifying file placement and permissions..."
+          echo "Verifying file placement in container root..."
           
-          # Use another temporary container just to run 'ls' on the volume
-          docker run --rm \
-            -v ${{ env.DOCKER_VOLUME_NAME }}:/target_volume \
+          # Exec into the container to verify it is at /
+          docker exec ${{ env.CONTAINER_NAME }} ls -lh /cs2_admin_backup.sql
