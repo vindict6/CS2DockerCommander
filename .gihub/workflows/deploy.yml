@@ -59,7 +59,6 @@ jobs:
             -p ${{ env.GAME_PORT }}:${{ env.GAME_PORT }}/tcp \
             -p ${{ env.GAME_PORT }}:${{ env.GAME_PORT }}/udp \
             -p ${{ env.GOTV_PORT }}:${{ env.GOTV_PORT }}/udp \
-            -p 3306:3306/tcp \
             --env-file .env \
             -e LD_LIBRARY_PATH="/CS2/game/bin/linuxsteamrt64" \
             -e GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}" \
