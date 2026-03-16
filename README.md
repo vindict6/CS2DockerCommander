@@ -25,7 +25,7 @@ Built on Docker and powered by GitHub Actions, it completely handles the heavy l
 It natively manages the game environment configuration while utilizing persistent Docker Volumes to ensure your maps, databases, and custom plugins are perfectly preserved across every update footprint.
 
 > **NEW: Easy Deployment Configuration!**  
-> You can now easily configure your ports, container name, volume name, and GOTV settings in `deployment_settings.json` without touching any code.
+> You can now easily configure your ports, container name, and GOTV settings in `deployment_settings.json` without touching any code.
 > This allows you to easily deploy multiple servers on one host!
 
 <br>
@@ -44,7 +44,8 @@ It natively manages the game environment configuration while utilizing persisten
 
 - **🎮 100% Containerized:** Runs securely inside an isolated Docker container. No messy host machine dependencies.
 - **☁️ Infrastructure as Code (IaC):** Server settings, launch parameters, and plugins are defined in simple XML/JSON files. Keep your entire environment version-controlled and safely backed up to GitHub.
-- **🔄 Automated CI/CD Pipelines:** Out-of-the-box GitHub Actions to spin up the server, securely compile secrets, update the base game, or perform lightning-fast hot-reloads of your simple configs.
+- **🔄 Automated CI/CD Pipelines:** Out-of-the-box GitHub Actions to spin up the server, securely compile secrets, update the base game (via a resilient 3-step SteamCMD fallback process), or perform lightning-fast hot-reloads of your simple configs.
+- **🛠️ Resilient SteamCMD Updates:** The deployment entrypoint uses a 3-step escalation strategy (simple update → validate → clean validate) with automatic stale state cleanup and IPv6 disabled during updates to prevent common 0x6 errors.
 - **🛡️ Built-in Database Node:** Features fully automated, persistent MariaDB integration for handling advanced admin systems and player stats securely out of the public eye.
 - **📦 Dynamic Asset Fetcher:** The system automatically scrapes, downloads, and extracts the latest releases of your compiled server plugins directly from GitHub on boot.
 

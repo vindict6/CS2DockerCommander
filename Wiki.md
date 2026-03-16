@@ -144,11 +144,16 @@ Here is what each Action workflow does:
 
 **1. Build and Deploy CS2 Server (`deploy.yml`)**
 - **What it does:** The absolute "Full Reset and Update" button.
-- It completely stops the existing server, wipes out the container, and builds a brand new container from scratch using the newest repository files you just pushed.
-- Critically, this routine runs SteamCMD and spends the time verifying and updating the Counter-Strike 2 base game entirely from Valve's network. Run this on large game-changing push days.
+- It completely stops the existing server (with a 30-second graceful shutdown window), wipes out the container, and builds a brand new container from scratch (with `--no-cache`) using the newest repository files you just pushed.
+- On boot, the entrypoint runs a **3-step SteamCMD update process** with automatic escalation:
+  1. **Simple Update** — Attempts a fast differential update using the existing app manifest.
+  2. **Validate** — If the simple update fails, cleans up temp files and retries with full file validation (`+app_update 730 validate`).
+  3. **Clean Validate** — If validation also fails, deletes the app manifest (`appmanifest_730.acf`) and runs a fresh validate from scratch.
+- Before running SteamCMD, the entrypoint cleans up stale lock files, incomplete downloads, and cached packages from previous runs. IPv6 is temporarily disabled at the kernel level during the update to prevent common SteamCMD connection errors (0x6), and re-enabled immediately after.
+- Run this on large game-changing push days or when a full CS2 base game update is needed.
 
 **2. Fast Update CS2 Server (`fast_update.yml`)**
-- **What it does:** Similar to deploy, but forcefully skips the lengthy Steam Base Game update and validation.
+- **What it does:** Similar to deploy, but forcefully skips the entire SteamCMD update process (all 3 steps above are bypassed).
 - Use this when you've just updated a custom configuration, modified a CS2Sharp Plugin parameter, or updated an admin JSON file inside your repository.
 - Because it flags `SKIP_CS2_UPDATE=true` into the environment, it immediately reconstructs the Docker configuration and applies your fast patches locally in a fraction of the time.
 
