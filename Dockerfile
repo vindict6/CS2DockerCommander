@@ -13,8 +13,8 @@ RUN wget -qO execstack.deb http://archive.ubuntu.com/ubuntu/pool/universe/p/prel
     dpkg -i execstack.deb && \
     rm execstack.deb
 
-# Grant the steam user passwordless sudo so it can execute execstack in the entrypoint
-RUN echo "steam ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+# Grant the steam user passwordless sudo so it can execute execstack and manage services in the entrypoint
+RUN echo "steam ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/steam && chmod 440 /etc/sudoers.d/steam
 
 ENV CS2_DIR=/CS2
 
@@ -28,7 +28,6 @@ WORKDIR ${CS2_DIR}
 # We move all deployment logic to a temporary /app/ directory inside the container
 COPY --chown=steam:steam server_config/ /app/server_config/
 COPY --chown=steam:steam configs/ /app/configs/
-COPY --chown=steam:steam databases/ /app/databases/
 COPY --chown=steam:steam deployment_settings.json /app/deployment_settings.json
 COPY --chown=steam:steam entrypoint.sh /app/entrypoint.sh
 
