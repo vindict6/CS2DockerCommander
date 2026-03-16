@@ -4,14 +4,75 @@ set -e
 if [ "$SKIP_CS2_UPDATE" = "true" ]; then
     echo "SKIP_CS2_UPDATE is set to true. Skipping CS2 base game update via SteamCMD..."
 else
-    echo "Updating CS2 Dedicated Server (Differential update)..."
-    ~/steamcmd/steamcmd.sh +force_install_dir ${CS2_DIR} +login anonymous +app_update 730 validate +quit
+    echo "Cleaning up stale SteamCMD state from previous runs..."
+    # Remove incomplete downloads and temp files that cause 0x6 errors on re-update
+    rm -rf "${CS2_DIR}/steamapps/downloading" "${CS2_DIR}/steamapps/temp" "${CS2_DIR}/steamapps/shadercache"
+    # Remove SteamCMD lock files that persist across container restarts via the volume
+    find "${CS2_DIR}" -maxdepth 2 -name "*.lock" -delete 2>/dev/null || true
+    find ~/steamcmd -name "*.lock" -delete 2>/dev/null || true
+    # Clear SteamCMD's package cache to avoid stale manifests
+    rm -rf ~/steamcmd/package 2>/dev/null || true
+
+    # Disable IPv6 — SteamCMD's IPv6 connections often cause 0x6 errors
+    echo "Disabling IPv6 for SteamCMD update..."
+    sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1 2>/dev/null || true
+    sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1 2>/dev/null || true
+
+    STEAMCMD="$HOME/steamcmd/steamcmd.sh +force_install_dir ${CS2_DIR} +login anonymous"
+    UPDATE_OK=false
+
+    # Step 1: Simple differential update using existing manifest
+    echo "Step 1: Attempting simple update..."
+    if $STEAMCMD +app_update 730 +quit; then
+        UPDATE_OK=true
+    else
+        echo "Simple update failed."
+
+        # Step 2: Validate/verify file integrity
+        echo "Step 2: Attempting update with file validation..."
+        rm -rf "${CS2_DIR}/steamapps/downloading" "${CS2_DIR}/steamapps/temp"
+        sleep 5
+        if $STEAMCMD +app_update 730 validate +quit; then
+            UPDATE_OK=true
+        else
+            echo "Validate failed."
+
+            # Step 3: Delete manifest and do a clean validate
+            echo "Step 3: Deleting manifest and attempting clean validate..."
+            rm -rf "${CS2_DIR}/steamapps/downloading" "${CS2_DIR}/steamapps/temp"
+            rm -f "${CS2_DIR}/steamapps/appmanifest_730.acf" 2>/dev/null || true
+            sleep 5
+            if $STEAMCMD +app_update 730 validate +quit; then
+                UPDATE_OK=true
+            fi
+        fi
+    fi
+
+    if [ "$UPDATE_OK" != "true" ]; then
+        echo "ERROR: SteamCMD failed all 3 update attempts."
+        sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 2>/dev/null || true
+        sudo sysctl -w net.ipv6.conf.default.disable_ipv6=0 2>/dev/null || true
+        exit 1
+    fi
+
+    # Re-enable IPv6 after successful update
+    echo "Re-enabling IPv6..."
+    sudo sysctl -w net.ipv6.conf.all.disable_ipv6=0 2>/dev/null || true
+    sudo sysctl -w net.ipv6.conf.default.disable_ipv6=0 2>/dev/null || true
 fi
 
 # Configure Ports and Startup arguments based on deployment_settings.json
-GAME_PORT=$(jq -r '.GAME_PORT // 27015' /app/deployment_settings.json)
-GOTV_PORT=$(jq -r '.GOTV_PORT // 27020' /app/deployment_settings.json)
-GOTV_ENABLED=$(jq -r '.GOTV_ENABLED // false' /app/deployment_settings.json)
+DEPLOY_SETTINGS="/app/deployment_settings.json"
+if [ ! -f "$DEPLOY_SETTINGS" ]; then
+    echo "WARNING: $DEPLOY_SETTINGS not found. Using default values."
+    GAME_PORT=27015
+    GOTV_PORT=27020
+    GOTV_ENABLED=false
+else
+    GAME_PORT=$(jq -r '.GAME_PORT // 27015' "$DEPLOY_SETTINGS")
+    GOTV_PORT=$(jq -r '.GOTV_PORT // 27020' "$DEPLOY_SETTINGS")
+    GOTV_ENABLED=$(jq -r '.GOTV_ENABLED // false' "$DEPLOY_SETTINGS")
+fi
 
 GAME_PORT_ARG="-port ${GAME_PORT}"
 if [ "$GOTV_ENABLED" = "true" ]; then
@@ -78,44 +139,27 @@ if [ "$ENABLE_LOCALHOST_DB" = "true" ]; then
     done
 
     echo "Configuring MariaDB..."
-    # Check if backup file exists to restore
-    # Look in the repo's databases/ folder (copied to /app/databases inside container)
-    BACKUP_FILE="/app/databases/cs2_admin_backup.sql"
-    
-    # Also support hidden file in root of volume for manual overrides if needed (optional, keeping for backward compat or manual drop)
-    HIDDEN_BACKUP_FILE="${CS2_DIR}/.cs2_admin_backup.sql"
-
-    if [ -f "$HIDDEN_BACKUP_FILE" ]; then
-        BACKUP_FILE="$HIDDEN_BACKUP_FILE"
-    fi
 
     echo "Ensuring administrative database user..."
-    # Secure installation and setup DB/User
-    # Check if DB exists
     sudo mysql -e "CREATE DATABASE IF NOT EXISTS cs2_admin;"
-
-    # Create user if not exists (or update password)
-    # Note: Identify simply by password again updates it
     sudo mysql -e "CREATE USER IF NOT EXISTS 'cs2_admin_user'@'%' IDENTIFIED BY '${SA_DB_PASS}';"
     sudo mysql -e "ALTER USER 'cs2_admin_user'@'%' IDENTIFIED BY '${SA_DB_PASS}';"
     sudo mysql -e "GRANT ALL PRIVILEGES ON cs2_admin.* TO 'cs2_admin_user'@'%' REQUIRE SSL;"
     sudo mysql -e "FLUSH PRIVILEGES;"
 
+    # Only restore from a backup file placed in the root of the Docker volume
+    # Use the injectsql.yml workflow to place this file before a deploy/restart
+    BACKUP_FILE="${CS2_DIR}/.cs2_admin_backup.sql"
     if [ -f "$BACKUP_FILE" ]; then
-        echo "Found backup file: $BACKUP_FILE. Restoring..."
-        # Use the root account (default socket auth) to restore
+        echo "Found backup file at volume root: $BACKUP_FILE. Restoring..."
         if sudo mysql cs2_admin < "$BACKUP_FILE"; then
-            echo "Restore complete."
-            # Only delete if it was the temp hidden file in the volume, not the repo file
-            if [ "$BACKUP_FILE" = "$HIDDEN_BACKUP_FILE" ]; then
-                 rm -f "$BACKUP_FILE"
-                 echo "Deleted hidden backup file."
-            fi
+            echo "Restore complete. Removing backup file to prevent re-import."
+            rm -f "$BACKUP_FILE"
         else
             echo "ERROR: Failed to restore backup file."
         fi
     else
-        echo "No backup file found (${BACKUP_FILE}). Using existing database state."
+        echo "No backup file found at volume root. Using existing database state."
     fi
 else
     echo "Skipping MariaDB setup (SIMPLEADMIN_LOCALHOST_DB=false)."
