@@ -31,15 +31,15 @@ jobs:
 
       - name: Build Docker image locally
         run: |
-          docker build \
+          docker build --no-cache \
             --build-arg GAME_PORT="${{ env.GAME_PORT }}" \
             --build-arg GOTV_PORT="${{ env.GOTV_PORT }}" \
             -t ${{ env.IMAGE_NAME }}:latest .
 
       - name: Stop and remove existing container
         run: |
-          # The "|| true" prevents the workflow from failing if the container doesn't exist yet
-          docker stop ${{ env.CONTAINER_NAME }} || true
+          # Give the CS2 server 30s to shut down gracefully so files aren't left locked
+          docker stop -t 30 ${{ env.CONTAINER_NAME }} || true
           docker rm ${{ env.CONTAINER_NAME }} || true
 
       - name: Prepare environment variables

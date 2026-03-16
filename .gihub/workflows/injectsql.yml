@@ -1,4 +1,4 @@
-name: Inject SQL Backup to Container Root
+name: Inject SQL Backup to Volume Root
 
 on:
   workflow_dispatch:
@@ -16,27 +16,30 @@ jobs:
           SETTINGS_FILE="${{ github.workspace }}/deployment_settings.json"
           
           if [ -f "$SETTINGS_FILE" ]; then
-            # Extract the CONTAINER_NAME using jq
-            CONTAINER=$(jq -r '.CONTAINER_NAME' "$SETTINGS_FILE")
-            echo "CONTAINER_NAME=$CONTAINER" >> $GITHUB_ENV
-            echo "Loaded Container: $CONTAINER"
+            DOCKER_VOLUME_NAME=$(jq -r '.DOCKER_VOLUME_NAME // "cs2-data"' "$SETTINGS_FILE")
+            echo "DOCKER_VOLUME_NAME=$DOCKER_VOLUME_NAME" >> $GITHUB_ENV
+            echo "Loaded Volume: $DOCKER_VOLUME_NAME"
           else
             echo "::error::deployment_settings.json not found in root!"
             exit 1
           fi
 
-      - name: Copy SQL file into Container Root
+      - name: Copy SQL file into Volume Root
         run: |
-          echo "Copying backup to the root (/) of running container: ${{ env.CONTAINER_NAME }}..."
+          echo "Copying backup to the root of Docker volume: ${{ env.DOCKER_VOLUME_NAME }}..."
           
-          # docker cp copies the file directly into the running container's filesystem
-          docker cp ${{ github.workspace }}/databases/cs2_admin_backup.sql ${{ env.CONTAINER_NAME }}:/cs2_admin_backup.sql
+          # Use a temporary container to copy the file directly into the persistent volume
+          docker run --rm \
+            -v ${{ env.DOCKER_VOLUME_NAME }}:/CS2 \
+            -v ${{ github.workspace }}/databases:/backup:ro \
+            alpine cp /backup/cs2_admin_backup.sql /CS2/.cs2_admin_backup.sql
           
-          echo "File successfully injected."
+          echo "File successfully injected into volume."
 
-      - name: Verify file in container
+      - name: Verify file in volume
         run: |
-          echo "Verifying file placement in container root..."
+          echo "Verifying file placement in volume root..."
           
-          # Exec into the container to verify it is at /
-          docker exec ${{ env.CONTAINER_NAME }} ls -lh /cs2_admin_backup.sql
+          docker run --rm \
+            -v ${{ env.DOCKER_VOLUME_NAME }}:/CS2:ro \
+            alpine ls -lh /CS2/.cs2_admin_backup.sql
